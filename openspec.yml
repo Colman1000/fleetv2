@@ -1,0 +1,531 @@
+openapi: 3.0.3
+info:
+  title: FleetCore API
+  version: 1.0.0
+  description: |
+    Serverless logistics & fleet management API built on Cloudflare.
+    Features: multi-tenant, task lifecycle, rider management, auto-assignment, webhooks.
+servers:
+  - url: https://api.fleetcore.dev/v1
+    description: Production server
+  - url: https://sandbox.api.fleetcore.dev/v1
+    description: Sandbox for testing
+security:
+  - ApiKeyAuth: []
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+  schemas:
+    Developer:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        created_at:
+          type: string
+          format: date-time
+    ApiKey:
+      type: object
+      properties:
+        id:
+          type: string
+        prefix:
+          type: string
+        scopes:
+          type: array
+          items:
+            type: string
+        expires_at:
+          type: string
+          format: date-time
+    Rider:
+      type: object
+      properties:
+        id:
+          type: string
+        developer_id:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+          format: email
+        vehicle_type:
+          type: string
+          enum:
+            - motorcycle
+            - bicycle
+            - truck_small
+            - truck_large
+            - car
+            - foot
+        tags:
+          type: array
+          items:
+            type: string
+        presence:
+          type: string
+          enum:
+            - online
+            - offline
+            - busy
+            - available
+        location:
+          type: object
+          properties:
+            latitude:
+              type: number
+            longitude:
+              type: number
+            accuracy:
+              type: number
+            timestamp:
+              type: string
+              format: date-time
+    Waypoint:
+      type: object
+      properties:
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+        address:
+          type: string
+        type:
+          type: string
+          enum:
+            - pickup
+            - stop
+            - destination
+        description:
+          type: string
+        time_window:
+          type: object
+          properties:
+            start:
+              type: string
+              format: date-time
+            end:
+              type: string
+              format: date-time
+        priority:
+          type: string
+          enum:
+            - normal
+            - urgent
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+        developer_id:
+          type: string
+        description:
+          type: string
+        auto_assign:
+          type: boolean
+        metadata:
+          type: object
+        webhook_url:
+          type: string
+          format: uri
+        waypoints:
+          type: array
+          items:
+            $ref: "#/components/schemas/Waypoint"
+        pickup_lat:
+          type: number
+        pickup_lng:
+          type: number
+        pickup_address:
+          type: string
+        destination_lat:
+          type: number
+        destination_lng:
+          type: number
+        destination_address:
+          type: string
+        status:
+          type: string
+          enum:
+            - created
+            - assigned
+            - accepted
+            - en_route
+            - arrived
+            - completed
+            - cancelled
+            - assignment_failed
+        created_at:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+paths:
+  /register:
+    post:
+      summary: Create developer account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+              required:
+                - email
+                - password
+      responses:
+        "201":
+          description: Developer created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Developer"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /apikeys:
+    post:
+      summary: Generate new API key
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scopes:
+                  type: array
+                  items:
+                    type: string
+                expires_at:
+                  type: string
+                  format: date-time
+              required:
+                - scopes
+      responses:
+        "201":
+          description: API key created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKey"
+  /riders:
+    post:
+      summary: Register a rider
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Rider"
+      responses:
+        "201":
+          description: Rider created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rider"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /riders/available:
+    get:
+      summary: Query available riders
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: radius
+          in: query
+          schema:
+            type: number
+        - name: vehicle_type
+          in: query
+          schema:
+            type: string
+        - name: tags
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of riders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Rider"
+  /tasks:
+    post:
+      summary: Create a task
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Task"
+      responses:
+        "201":
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      summary: List tasks
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Tasks list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+  /tasks/{taskId}:
+    get:
+      summary: Get task details
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Task object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      summary: Update task
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description:
+                  type: string
+                waypoints:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Waypoint"
+                eta:
+                  type: string
+                  format: date-time
+      responses:
+        "200":
+          description: Task updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: Cancel task
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Task cancelled
+        "400":
+          description: Cannot cancel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /tasks/{taskId}/available:
+    get:
+      summary: Get available riders for manual assignment
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of candidate riders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Rider"
+  /tasks/{taskId}/assign:
+    patch:
+      summary: Assign rider to task
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rider_id:
+                  type: string
+              required:
+                - rider_id
+      responses:
+        "200":
+          description: Task assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /tasks/{taskId}/status:
+    patch:
+      summary: Update task status
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - created
+                    - assigned
+                    - accepted
+                    - en_route
+                    - arrived
+                    - completed
+                    - cancelled
+              required:
+                - status
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
