@@ -1,0 +1,167 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fleetapi",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-05-13",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "JWT_SECRET": "xxxx",
+    "API_KEY_SALT": "xxxx",
+    "ENV": "dev",
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "TASK_DO",
+        "class_name": "TaskDO",
+      },
+      {
+        "name": "RIDER_DO",
+        "class_name": "RiderDO",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes": ["TaskDO", "RiderDO"],
+    },
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_id": "f5ef5025-d381-4272-bc21-4a92bd90b58c",
+      "database_name": "fleet-dev",
+      "migrations_dir": "./migrations/",
+    },
+  ],
+  "queues": {
+    "producers": [
+      {
+        "queue": "AUTO_ASSIGN_QUEUE",
+        "binding": "AUTO_ASSIGN_QUEUE",
+      },
+      {
+        "queue": "WEBHOOK_QUEUE",
+        "binding": "WEBHOOK_QUEUE",
+      },
+    ],
+    "consumers": [
+      {
+        "queue": "AUTO_ASSIGN_QUEUE"
+      },
+      {
+        "queue": "WEBHOOK_QUEUE"
+      },
+    ],
+  },
+  "env": {
+    "dev": {
+      "vars": {
+        "JWT_SECRET": "xxxx",
+        "API_KEY_SALT": "xxxx",
+        "ENV": "dev",
+      },
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "TASK_DO",
+            "class_name": "TaskDO",
+          },
+          {
+            "name": "RIDER_DO",
+            "class_name": "RiderDO",
+          },
+        ],
+      },
+      "migrations": [
+        {
+          "tag": "v1",
+          "new_classes": ["TaskDO", "RiderDO"],
+        },
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_id": "f5ef5025-d381-4272-bc21-4a92bd90b58c",
+          "database_name": "fleet-dev",
+          "migrations_dir": "./migrations/",
+        },
+      ],
+      "queues": {
+        "producers": [
+          {
+            "queue": "AUTO_ASSIGN_QUEUE",
+            "binding": "AUTO_ASSIGN_QUEUE",
+          },
+          {
+            "queue": "WEBHOOK_QUEUE",
+            "binding": "WEBHOOK_QUEUE",
+          },
+        ],
+        "consumers": [
+          {
+            "queue": "AUTO_ASSIGN_QUEUE"
+          },
+          {
+            "queue": "WEBHOOK_QUEUE"
+          },
+        ],
+      },
+    },
+    "prod": {
+      "name": "fleetapi",
+      "vars": {
+        "JWT_SECRET": "xxxx",
+        "API_KEY_SALT": "xxxx",
+        "ENV": "prod",
+      },
+      "durable_objects": {
+        "bindings": [
+          {
+            "name": "TASK_DO",
+            "class_name": "TaskDO",
+          },
+          {
+            "name": "RIDER_DO",
+            "class_name": "RiderDO",
+          },
+        ],
+      },
+      "migrations": [
+        {
+          "tag": "v1",
+          "new_classes": ["TaskDO", "RiderDO"],
+        },
+      ],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_id": "e0172225-684a-4639-9673-be0f3e872358",
+          "database_name": "fleet",
+          "migrations_dir": "./migrations/",
+        },
+      ],
+      "queues": {
+        "producers": [
+          {
+            "queue": "AUTO_ASSIGN_QUEUE",
+            "binding": "AUTO_ASSIGN_QUEUE",
+          },
+          {
+            "queue": "WEBHOOK_QUEUE",
+            "binding": "WEBHOOK_QUEUE",
+          },
+        ],
+        "consumers": [
+          {
+            "queue": "AUTO_ASSIGN_QUEUE",
+          },
+          {
+            "queue": "WEBHOOK_QUEUE",
+          },
+        ],
+      },
+    },
+  },
+}
